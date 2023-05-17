@@ -1,0 +1,89 @@
+---
+# tasks file for roles/apache2
+
+- name: Installation apache2
+  hosts: servers
+  remote_user: revan
+
+  tasks:
+  apt:
+    name: apache2
+    state: present
+  register: result_apache2
+
+- name: afficher la variable du register
+  debug:
+   var: result_apache2
+
+- name: Etat de apache2
+  debug:
+    msg: "Apache2 est deja installe"
+  when: result_apache2.changed != true
+
+- name: Copier image rootme.png
+  copy:
+    src: /etc/ansible/globalvars/rootme.png
+    dest: /var/www/html
+  register: result_rootme
+
+- name: afficher la variable du register
+  debug:
+   var: result_rootme.changed
+
+
+- name: Etat image rootme
+  debug:
+    msg: "image rootme est deja installe"
+  when: result_apache2.changed != true
+
+- name: Copier le template sur le serveur web
+  copy:
+    src: /etc/ansible/globalvars/Template j2 index.j2.j2
+    dest: /var/www/html/index.html
+
+- name: Installation de NTP
+  apt:
+    name: ntp
+    state: present
+  register: result_ntp
+
+- name: afficher la variable du register ntp
+  debug:
+   var: result_ntp.changed
+
+- name: Etat de NTP
+  debug:
+    msg: "NTP est deja installe"
+  when: result_ntp.changed != true
+
+- name: Creation du fichier NTP.conf
+  file:
+   dest: "/etc/ntp.conf"
+   state: touch
+   mode: "0755"
+
+- name: Ecrire dans le fichier ntp.conf
+  lineinfile:
+    path: "/etc/ntp.conf"
+    line: "IP : {{ item.ip }}, Computer: {{ item.computer }}"
+    state: present
+  loop: "{{ serveur }}"
+
+- name: Autoriser le port 80
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 80
+    jump: ACCEPT
+    action: insert
+
+- name: création de xavki
+  user:
+    name: sone
+    state: present
+    password: "{{ 'password' | password_hash('sha512') }}"
+- name: apache installed
+      ansible.builtin.apt:
+        name: apache2
+        update_cache: true
+        state: latest

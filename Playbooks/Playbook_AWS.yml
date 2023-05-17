@@ -1,0 +1,38 @@
+---
+- name: Update and secure Amazon Linux servers
+  hosts: aws
+  become: true
+  tasks:
+    - name: Update all packages
+      yum:
+        name: '*'
+        state: latest
+        use_backend: dnf
+      become: yes
+
+    - name: Install firewalld
+      yum:
+        name: firewalld
+        state: latest
+        use_backend: dnf
+      become: yes
+
+    - name: Enable and start firewalld
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+      become: yes
+
+    - name: Install fail2ban
+      yum:
+        name: fail2ban
+        state: latest
+        use_backend: dnf
+      become: yes
+
+    - name: Enable and start fail2ban
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes

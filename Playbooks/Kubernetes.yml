@@ -1,0 +1,63 @@
+---
+- name: Install Kubernetes
+  hosts: k8s_hosts
+  become: true
+  gather_facts: yes
+
+  tasks:
+  - name: Install Docker
+    apt:
+      name: docker.io
+      state: present
+    when: ansible_os_family == "Debian"
+
+  - name: Install Kubernetes components
+    apt:
+      name:
+      - apt-transport-https
+      - curl
+      - gnupg2
+      state: present
+
+  - name: Add Kubernetes apt-key
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Add Kubernetes apt repository
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+
+  - name: Install Kubernetes
+    apt:
+      name:
+      - kubelet
+      - kubeadm
+      - kubectl
+      state: present
+
+  - name: Hold Kubernetes packages
+    command: apt-mark hold kubelet kubeadm kubectl
+
+  - name: Enable and start Docker
+    systemd:
+      name: docker
+      state: started
+      enabled: yes
+
+  - name: Initialize Kubernetes Master
+    command: kubeadm init --pod-network-cidr=10.244.0.0/16
+    when: "'master' in group_names"
+
+  - name: Setup kubeconfig for vagrant user
+    command: "{{ item }}"
+    with_items:
+    - mkdir -p /home/vagrant/.kube
+    - cp -i /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+    - chown vagrant:vagrant /home/vagrant/.kube/config
+    when: "'master' in group_names"
+
+  - name: Install Flannel networking
+    command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    when: "'master' in group_names"
